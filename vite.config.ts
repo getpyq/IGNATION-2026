@@ -1,0 +1,50 @@
+import tailwindcss from '@tailwindcss/vite';
+import react from '@vitejs/plugin-react';
+import fs from 'fs';
+import path from 'path';
+import { defineConfig } from 'vite';
+import { viteSingleFile } from 'vite-plugin-singlefile';
+
+export default defineConfig(() => {
+  return {
+    plugins: [
+      react(),
+      tailwindcss(),
+      viteSingleFile(),
+      {
+        name: 'export-single-html-deliverable',
+        apply: 'build',
+        closeBundle(error?: Error): void {
+          if (error) {
+            return;
+          }
+          const rootDir = process.cwd();
+          const distIndex = path.resolve(rootDir, 'dist', 'index.html');
+          if (fs.existsSync(distIndex)) {
+            const publicTarget = path.resolve(rootDir, 'public', 'ignition-2026.html');
+            const rootTarget = path.resolve(rootDir, 'ignition-2026.html');
+            fs.mkdirSync(path.dirname(publicTarget), { recursive: true });
+            fs.copyFileSync(distIndex, publicTarget);
+            fs.copyFileSync(distIndex, rootTarget);
+          }
+        },
+      },
+    ],
+    build: {
+      assetsInlineLimit: 100000000,
+      cssCodeSplit: false,
+    },
+    resolve: {
+      alias: {
+        '@': path.resolve(process.cwd(), '.'),
+      },
+    },
+    server: {
+      // HMR is disabled in AI Studio via DISABLE_HMR env var.
+      // Do not modify—file watching is disabled to prevent flickering during agent edits.
+      hmr: process.env.DISABLE_HMR !== 'true',
+      // Disable file watching when DISABLE_HMR is true to save CPU during agent edits.
+      watch: process.env.DISABLE_HMR === 'true' ? null : {},
+    },
+  };
+});
